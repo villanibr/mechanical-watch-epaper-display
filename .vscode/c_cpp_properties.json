@@ -8,9 +8,9 @@
         {
             "name": "PlatformIO",
             "includePath": [
-                "C:/Users/LeandroCasella/OneDrive - Direct Digital/Documents/PlatformIO/Projects/16X2 LCD Module/include",
-                "C:/Users/LeandroCasella/OneDrive - Direct Digital/Documents/PlatformIO/Projects/16X2 LCD Module/src",
-                "C:/Users/LeandroCasella/OneDrive - Direct Digital/Documents/PlatformIO/Projects/16X2 LCD Module/.pio/libdeps/esp32doit-devkit-v1/LiquidCrystal/src",
+                "C:/Users/LeandroCasella/OneDrive - Direct Digital/Documents/PlatformIO/Projects/mechanical-watch-epaper-display/include",
+                "C:/Users/LeandroCasella/OneDrive - Direct Digital/Documents/PlatformIO/Projects/mechanical-watch-epaper-display/src",
+                "C:/Users/LeandroCasella/OneDrive - Direct Digital/Documents/PlatformIO/Projects/mechanical-watch-epaper-display/.pio/libdeps/esp32doit-devkit-v1/LiquidCrystal/src",
                 "C:/Users/LeandroCasella/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/newlib/platform_include",
                 "C:/Users/LeandroCasella/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include",
                 "C:/Users/LeandroCasella/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include/esp_additions/freertos",
@@ -241,9 +241,9 @@
             "browse": {
                 "limitSymbolsToIncludedHeaders": true,
                 "path": [
-                    "C:/Users/LeandroCasella/OneDrive - Direct Digital/Documents/PlatformIO/Projects/16X2 LCD Module/include",
-                    "C:/Users/LeandroCasella/OneDrive - Direct Digital/Documents/PlatformIO/Projects/16X2 LCD Module/src",
-                    "C:/Users/LeandroCasella/OneDrive - Direct Digital/Documents/PlatformIO/Projects/16X2 LCD Module/.pio/libdeps/esp32doit-devkit-v1/LiquidCrystal/src",
+                    "C:/Users/LeandroCasella/OneDrive - Direct Digital/Documents/PlatformIO/Projects/mechanical-watch-epaper-display/include",
+                    "C:/Users/LeandroCasella/OneDrive - Direct Digital/Documents/PlatformIO/Projects/mechanical-watch-epaper-display/src",
+                    "C:/Users/LeandroCasella/OneDrive - Direct Digital/Documents/PlatformIO/Projects/mechanical-watch-epaper-display/.pio/libdeps/esp32doit-devkit-v1/LiquidCrystal/src",
                     "C:/Users/LeandroCasella/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/newlib/platform_include",
                     "C:/Users/LeandroCasella/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include",
                     "C:/Users/LeandroCasella/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/freertos/include/esp_additions/freertos",
