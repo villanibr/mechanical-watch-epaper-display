@@ -4,8 +4,6 @@
 // Inspired on Grand Seiko Spring Drive movement.
 // Author: Leandro Casella
 // Start: 2023-05-05
-// License of this code: MIT
-// Background and conception: 
 // References / code snippet sources (credits):
 // https://www.circuitschools.com/interfacing-16x2-lcd-module-with-esp32-with-and-without-i2c/
 // https://lastminuteengineers.com/esp32-deep-sleep-wakeup-sources/
