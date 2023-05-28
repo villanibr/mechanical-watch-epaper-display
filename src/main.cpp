@@ -1,20 +1,39 @@
 // *****************************************************************************
-// Prototype for a digital low energy e-paper display "clock" (external time tracking).
-// Made as a hobby, to learn about electronics and low power circuits.
-// Inspired on Grand Seiko Spring Drive movement.
+// Code for a mechanically powered and controlled watch epaper display prototype.
+// Current components:
+// - ESP32 Wemos Lolin32 Lite (circuit logic)
+// - HINK-E154A07-A1 epaper display and board (to show 24hh:mi time)
+// - Generic 3v3 power source
+// - Commodity components
 // Author: Leandro Casella
 // Start: 2023-05-05
 // References / code snippet sources (credits):
 // https://www.circuitschools.com/interfacing-16x2-lcd-module-with-esp32-with-and-without-i2c/
 // https://lastminuteengineers.com/esp32-deep-sleep-wakeup-sources/
 // https://randomnerdtutorials.com/esp32-external-wake-up-deep-sleep/
+// https://github.com/ZinggJM/GxEPD2/tree/master
 // *****************************************************************************
 
 #include <Arduino.h>
-#include <LiquidCrystal.h>
 #include <string>
 #include "driver/gpio.h"
 #include "driver/rtc_io.h"
+
+// For LCD displays
+#include <LiquidCrystal.h>
+
+// For epaper displays
+#include <GxEPD2_BW.h>
+#include <GxEPD2_3C.h>
+#include <GxEPD2_7C.h>
+#include <Fonts/FreeMonoBold9pt7b.h>
+#include <Fonts/FreeMonoBold12pt7b.h>
+#include <Fonts/FreeMonoBold18pt7b.h>
+#include <Fonts/FreeMonoBold24pt7b.h>
+
+// select the display class and display driver class in the following file (new style):
+#include "GxEPD2_display_selection_new_style.h"
+
 
 using namespace std;
 
@@ -81,10 +100,18 @@ std::string string_format(const std::string fmt, ...) {
     return str;
 }
 
+const char HelloWorld[] = "Hello World!";
+
+
 void setup() {
   
   Serial.begin(115200);
   //delay(1000); // Take some time to open up the Serial Monitor
+
+
+  // **********
+  // Wakeup
+  // **********
 
   /*
   First we configure the wake up source
@@ -104,16 +131,21 @@ void setup() {
   // Print the wakeup reason for ESP32
   print_wakeup_reason();
 
-  // Increment boot number and print it every reboot
-  ++bootCount;
-  String bootNumberMessage = "Boot number: " + String(bootCount);
-  Serial.println(bootNumberMessage);
-
   // Get the pin that woke the board and reset the minute counter, depending on the pin
   int wakeup_pin = get_ext1_wakeup_pin();
   Serial.println("Wakeup pin: " + String(wakeup_pin));
   if(wakeup_pin == GPIO_NUM_33)
     minuteCount = -1;
+
+
+  // **********
+  // Counters
+  // **********
+
+  // Increment boot number and print it every reboot
+  ++bootCount;
+  String bootNumberMessage = "Boot number: " + String(bootCount);
+  Serial.println(bootNumberMessage);
 
   // Increment minute counter
   const int minMinutes = 0;
@@ -131,14 +163,53 @@ void setup() {
   String timeMessage = "Time: " + formattedTime;
   Serial.println(timeMessage);
   
-  // set up the LCD's number of columns and rows:
+
+  // **********
+  // LCD
+  // **********
+
+  /*// set up the LCD's number of columns and rows:
   lcd.begin(16, 2);
   // Print a message to the LCD.
   lcd.print(bootNumberMessage);
 
   // Print the time
   lcd.setCursor(0, 1);
-  lcd.print(timeMessage);
+  lcd.print(timeMessage);*/
+
+
+  // **********
+  // Epaper
+  // **********
+  //display.init(115200); // default 10ms reset pulse, e.g. for bare panels with DESPI-C02
+  display.init(115200, true, 2, false); // USE THIS for Waveshare boards with "clever" reset circuit, 2ms reset pulse
+    
+  //display.setRotation(1);
+  display.setRotation(3);
+  //display.setFont(&FreeMonoBold9pt7b);
+  display.setFont(&FreeMonoBold18pt7b);
+  display.setTextColor(GxEPD_BLACK);
+  int16_t tbx, tby; uint16_t tbw, tbh;
+  display.getTextBounds(formattedTime, 0, 0, &tbx, &tby, &tbw, &tbh);
+  // center the bounding box by transposition of the origin:
+  uint16_t x = ((display.width() - tbw) / 2) - tbx;
+  uint16_t y = ((display.height() - tbh) / 2) - tby;
+  display.setFullWindow();
+  display.firstPage();
+  do
+  {
+    display.fillScreen(GxEPD_WHITE);
+    display.setCursor(x, y);
+    display.print(formattedTime);
+  }
+  while (display.nextPage());
+    
+  display.hibernate();
+
+
+  // **********
+  // Sleep
+  // **********
 
   // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/sleep_modes.html
   // Not tested to check if power consumption decreases or increases
