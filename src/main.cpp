@@ -1,7 +1,7 @@
 // *****************************************************************************
 // Code for a mechanically powered and controlled watch epaper display prototype.
 // Current components:
-// - ESP32 Wemos Lolin32 Lite (circuit logic)
+// - ESP32 Wemos Lolin32 Lite board (for circuit logic)
 // - HINK-E154A07-A1 epaper display and board (to show 24hh:mi time)
 // - Generic 3v3 power source
 // - Commodity components
@@ -12,6 +12,8 @@
 // https://lastminuteengineers.com/esp32-deep-sleep-wakeup-sources/
 // https://randomnerdtutorials.com/esp32-external-wake-up-deep-sleep/
 // https://github.com/ZinggJM/GxEPD2/tree/master
+// https://www.hackster.io/galoebn/e-paper-display-using-partial-updates-a8af20
+// https://learn.adafruit.com/adafruit-gfx-graphics-library/using-fonts
 // *****************************************************************************
 
 #include <Arduino.h>
@@ -34,7 +36,6 @@
 // select the display class and display driver class in the following file (new style):
 #include "GxEPD2_display_selection_new_style.h"
 
-
 using namespace std;
 
 // Mask for GPIO#32 and GPIO#33 pins, that will wake up ESP32 from deep sleep
@@ -52,62 +53,82 @@ RTC_DATA_ATTR int minuteCount = minuteCountStart;
 LiquidCrystal lcd(19, 23, 18, 17, 16, 15);
 
 /// @brief Method to print the reason by which ESP32 has been awaken from sleep
-void print_wakeup_reason(){
+void print_wakeup_reason()
+{
   esp_sleep_wakeup_cause_t wakeup_reason;
 
   wakeup_reason = esp_sleep_get_wakeup_cause();
 
-  switch(wakeup_reason)
+  switch (wakeup_reason)
   {
-    case ESP_SLEEP_WAKEUP_EXT0 : Serial.println("Wakeup caused by external signal using RTC_IO"); break;
-    case ESP_SLEEP_WAKEUP_EXT1 : Serial.println("Wakeup caused by external signal using RTC_CNTL"); break;
-    case ESP_SLEEP_WAKEUP_TIMER : Serial.println("Wakeup caused by timer"); break;
-    case ESP_SLEEP_WAKEUP_TOUCHPAD : Serial.println("Wakeup caused by touchpad"); break;
-    case ESP_SLEEP_WAKEUP_ULP : Serial.println("Wakeup caused by ULP program"); break;
-    default : Serial.printf("Wakeup was not caused by deep sleep: %d\n",wakeup_reason); break;
+  case ESP_SLEEP_WAKEUP_EXT0:
+    Serial.println("Wakeup caused by external signal using RTC_IO");
+    break;
+  case ESP_SLEEP_WAKEUP_EXT1:
+    Serial.println("Wakeup caused by external signal using RTC_CNTL");
+    break;
+  case ESP_SLEEP_WAKEUP_TIMER:
+    Serial.println("Wakeup caused by timer");
+    break;
+  case ESP_SLEEP_WAKEUP_TOUCHPAD:
+    Serial.println("Wakeup caused by touchpad");
+    break;
+  case ESP_SLEEP_WAKEUP_ULP:
+    Serial.println("Wakeup caused by ULP program");
+    break;
+  default:
+    Serial.printf("Wakeup was not caused by deep sleep: %d\n", wakeup_reason);
+    break;
   }
 }
 
 /// @brief Returns the decimal number of the pin that woke the board
-/// @return 
-int get_ext1_wakeup_pin(){
+/// @return
+int get_ext1_wakeup_pin()
+{
   uint64_t wakeup_pin_base2 = esp_sleep_get_ext1_wakeup_status();
-  return log(wakeup_pin_base2)/log(2);
+  return log(wakeup_pin_base2) / log(2);
 }
 
 /// @brief Format string with arguments, according to standard printf format masks
-/// @param fmt 
-/// @param  
-/// @return 
-std::string string_format(const std::string fmt, ...) {
-    int size = ((int)fmt.size()) * 2 + 50;   // Use a rubric appropriate for your code
-    std::string str;
-    va_list ap;
-    while (1) {     // Maximum two passes on a POSIX system...
-        str.resize(size);
-        va_start(ap, fmt);
-        int n = vsnprintf((char *)str.data(), size, fmt.c_str(), ap);
-        va_end(ap);
-        if (n > -1 && n < size) {  // Everything worked
-            str.resize(n);
-            return str;
-        }
-        if (n > -1)  // Needed size returned
-            size = n + 1;   // For null char
-        else
-            size *= 2;      // Guess at a larger size (OS specific)
+/// @param fmt
+/// @param
+/// @return
+std::string string_format(const std::string fmt, ...)
+{
+  int size = ((int)fmt.size()) * 2 + 50; // Use a rubric appropriate for your code
+  std::string str;
+  va_list ap;
+  while (1)
+  { // Maximum two passes on a POSIX system...
+    str.resize(size);
+    va_start(ap, fmt);
+    int n = vsnprintf((char *)str.data(), size, fmt.c_str(), ap);
+    va_end(ap);
+    if (n > -1 && n < size)
+    { // Everything worked
+      str.resize(n);
+      return str;
     }
-    return str;
+    if (n > -1)     // Needed size returned
+      size = n + 1; // For null char
+    else
+      size *= 2; // Guess at a larger size (OS specific)
+  }
+  return str;
 }
 
 const char HelloWorld[] = "Hello World!";
 
+void setup()
+{
 
-void setup() {
-  
   Serial.begin(115200);
-  //delay(1000); // Take some time to open up the Serial Monitor
+  // delay(1000); // Take some time to open up the Serial Monitor
 
+  // Shortcuts
+  bool firstBoot = (bootCount == 0);
+  bool fullyInitDisplay = firstBoot;
 
   // **********
   // Wakeup
@@ -123,10 +144,10 @@ void setup() {
   Note that using internal pullups/pulldowns also requires
   RTC peripherals to be turned on.
   */
-  //esp_sleep_enable_ext0_wakeup(GPIO_NUM_33,1); //1 = High, 0 = Low
+  // esp_sleep_enable_ext0_wakeup(GPIO_NUM_33,1); //1 = High, 0 = Low
 
-  //If you were to use ext1, you would use it like
-  esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK,ESP_EXT1_WAKEUP_ANY_HIGH);
+  // If you were to use ext1, you would use it like
+  esp_sleep_enable_ext1_wakeup(BUTTON_PIN_BITMASK, ESP_EXT1_WAKEUP_ANY_HIGH);
 
   // Print the wakeup reason for ESP32
   print_wakeup_reason();
@@ -134,9 +155,11 @@ void setup() {
   // Get the pin that woke the board and reset the minute counter, depending on the pin
   int wakeup_pin = get_ext1_wakeup_pin();
   Serial.println("Wakeup pin: " + String(wakeup_pin));
-  if(wakeup_pin == GPIO_NUM_33)
+  if (wakeup_pin == GPIO_NUM_33)
+  {
     minuteCount = -1;
-
+    fullyInitDisplay = true;
+  }
 
   // **********
   // Counters
@@ -151,18 +174,18 @@ void setup() {
   const int minMinutes = 0;
   const int maxMinutes = 24 * 60;
   ++minuteCount;
-  if(minuteCount >= maxMinutes)
+  if (minuteCount >= maxMinutes)
     minuteCount = minMinutes;
 
   // Format time for display (hh24:mi) and print it
   int hours = minuteCount / 60;
   int minutes = minuteCount % 60;
-  //String time = String(hours) + ":" + String(minutes);
-  std:string formattedTimeCpp = string_format("%02d:%02d", hours, minutes);
+// String time = String(hours) + ":" + String(minutes);
+std:
+  string formattedTimeCpp = string_format("%02d:%02d", hours, minutes);
   String formattedTime = String(formattedTimeCpp.c_str());
   String timeMessage = "Time: " + formattedTime;
   Serial.println(timeMessage);
-  
 
   // **********
   // LCD
@@ -177,35 +200,71 @@ void setup() {
   lcd.setCursor(0, 1);
   lcd.print(timeMessage);*/
 
-
   // **********
   // Epaper
   // **********
-  //display.init(115200); // default 10ms reset pulse, e.g. for bare panels with DESPI-C02
-  display.init(115200, true, 2, false); // USE THIS for Waveshare boards with "clever" reset circuit, 2ms reset pulse
-    
-  //display.setRotation(1);
+
+  // Debug
+  String fullyInitDisplayMessage = fullyInitDisplay ? "true" : "false";
+  fullyInitDisplayMessage = "fullyInitDisplay? " + fullyInitDisplayMessage;
+  Serial.println(fullyInitDisplayMessage);
+
+  // Display initialization and setup
+  // display.init(115200); // default 10ms reset pulse, e.g. for bare panels with DESPI-C02
+  // display.init(115200, true, 2, false); // USE THIS for Waveshare boards with "clever" reset circuit, 2ms reset pulse
+  display.init(115200, fullyInitDisplay, 2, false);
+  display.firstPage();
+  // display.setRotation(1);
   display.setRotation(3);
-  //display.setFont(&FreeMonoBold9pt7b);
+  // display.setFont(&FreeMonoBold9pt7b);
   display.setFont(&FreeMonoBold18pt7b);
   display.setTextColor(GxEPD_BLACK);
-  int16_t tbx, tby; uint16_t tbw, tbh;
+
+  // With a monospaced font, the text boundaries for 5 chars (hh24:mi) should always be the same
+  int16_t tbx, tby;
+  uint16_t tbw, tbh;
   display.getTextBounds(formattedTime, 0, 0, &tbx, &tby, &tbw, &tbh);
-  // center the bounding box by transposition of the origin:
+  Serial.println("tbx: " + String(tbx) + ", tby: " + String(tby) + ", tbw: " + String(tbw) + ", tbh: " + String(tbh));
+
+  // Center the bounding box by transposition of the origin:
   uint16_t x = ((display.width() - tbw) / 2) - tbx;
   uint16_t y = ((display.height() - tbh) / 2) - tby;
-  display.setFullWindow();
+  Serial.println("x: " + String(x) + ", y: " + String(y));
+
+  // Partial window coordinates
+  int16_t pwx, pwy;
+  uint16_t pww, pwh;
+  pwx = x;
+  pwy = y - tbh; // As far as I understand, the y here is the baseline (bottom) of the text, not the top, like the lines on a notebook
+  pww = tbw;
+  pwh = tbh;
+  Serial.println("pwx: " + String(pwx) + ", pwy: " + String(pwy) + ", pww: " + String(pww) + ", pwh: " + String(pwh));
+
+  // Add a safety margin, mainly because of ints rouding down
+  uint16_t safetyMarginInPixelsH = tbw * 0.05;
+  uint16_t safetyMarginInPixelsV = tbh * 0.05;
+  pwx = pwx - safetyMarginInPixelsH;
+  pwy = pwy - safetyMarginInPixelsV;
+  pww = pww + (safetyMarginInPixelsH * 2);
+  pwh = pwh + (safetyMarginInPixelsV * 2);
+  Serial.println("pwx: " + String(pwx) + ", pwy: " + String(pwy) + ", pww: " + String(pww) + ", pwh: " + String(pwh));
+
+  // Guarantee a full update for reset purposes
+  if (fullyInitDisplay)
+    display.setFullWindow();
+  else
+    display.setPartialWindow(pwx, pwy, pww, pwh);
+
+  // Update the display
   display.firstPage();
   do
   {
-    display.fillScreen(GxEPD_WHITE);
+    // display.fillScreen(GxEPD_WHITE);
     display.setCursor(x, y);
     display.print(formattedTime);
-  }
-  while (display.nextPage());
-    
-  display.hibernate();
+  } while (display.nextPage());
 
+  display.hibernate();
 
   // **********
   // Sleep
@@ -213,8 +272,8 @@ void setup() {
 
   // https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/sleep_modes.html
   // Not tested to check if power consumption decreases or increases
-  //rtc_gpio_isolate(GPIO_NUM_32);
-  //rtc_gpio_isolate(GPIO_NUM_33);
+  // rtc_gpio_isolate(GPIO_NUM_32);
+  // rtc_gpio_isolate(GPIO_NUM_33);
 
   // Go to sleep now
   Serial.println("Going to sleep now");
@@ -222,10 +281,11 @@ void setup() {
   Serial.println("This will never be printed");
 }
 
-void loop() {
+void loop()
+{
   // set the cursor to column 0, line 1
   // (note: line 1 is the second row, since counting begins with 0):
-  //lcd.setCursor(0, 1);
+  // lcd.setCursor(0, 1);
   // print the number of seconds since reset:
-  //lcd.print(millis() / 1000);
+  // lcd.print(millis() / 1000);
 }
